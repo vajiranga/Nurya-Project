@@ -18,6 +18,7 @@ Route::get('/categories/{id}', [CategoryController::class, 'show']);
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::post('/order/whatsapp', [WhatsAppOrderController::class, 'submit']);
+Route::get('/vouchers', [\App\Http\Controllers\VoucherController::class, 'index']);
 
 // Admin Routes
 Route::middleware(['auth:sanctum', AdminDeviceMiddleware::class])->prefix('admin')->group(function () {
