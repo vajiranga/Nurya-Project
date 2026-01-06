@@ -2,103 +2,85 @@
 
 namespace Database\Seeders;
 
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Product;
 use App\Models\Category;
 
 class ProductSeeder extends Seeder
 {
-    public function run()
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
     {
-        // Get category IDs
-        $ringsCategory = Category::where('name', 'Rings')->first();
-        $necklacesCategory = Category::where('name', 'Necklaces')->first();
-        $braceletsCategory = Category::where('name', 'Bracelets')->first();
-        $earringsCategory = Category::where('name', 'Earrings')->first();
-
+        // Fetch categories to assign products
+        $ringCat = Category::where('name', 'Rings')->first();
+        $necklaceCat = Category::where('name', 'Necklaces')->first();
+        $braceletCat = Category::where('name', 'Bracelets')->first();
+        
         $products = [
-            // Rings
             [
-                'name' => 'Diamond Gold Ring',
-                'description' => 'Elegant gold ring with brilliant diamond center stone',
+                'name' => 'Classic Gold Wedding Band',
+                'description' => 'A timeless classic yellow gold wedding band, polished to perfection.',
+                'price' => 45000.00,
+                'gold_weight' => '4.2g',
+                'karat' => '22K',
+                'stock_status' => 'in_stock',
+                'category_id' => $ringCat?->id,
+                 // Using the dummy paths from frontend as placeholders
+                'images_json' => ['/images/products/ring1.png', '/images/products/ring2.png'],
+            ],
+            [
+                'name' => 'Diamond Solitaire Ring',
+                'description' => 'Exquisite single diamond set in 18K white gold.',
                 'price' => 125000.00,
-                'gold_weight' => '5.5',
+                'gold_weight' => '3.5g',
+                'karat' => '18K',
+                'stock_status' => 'in_stock',
+                'category_id' => $ringCat?->id,
+                'images_json' => ['/images/products/ring2.png'],
+            ],
+            [
+                'name' => 'Royal Gold Necklace',
+                'description' => 'Intricate traditional design for weddings and special occasions.',
+                'price' => 250000.00,
+                'gold_weight' => '24g',
                 'karat' => '22K',
-                'category_id' => $ringsCategory->id,
-                'images_json' => json_encode(['/images/products/ring1.png']),
+                'stock_status' => 'in_stock',
+                'category_id' => $necklaceCat?->id,
+                'images_json' => ['/images/products/necklace1.png', '/images/products/necklace2.png'],
             ],
             [
-                'name' => 'Wedding Band Ring',
-                'description' => 'Classic wedding band in pure gold with diamond accents',
-                'price' => 95000.00,
-                'gold_weight' => '4.2',
-                'karat' => '22K',
-                'category_id' => $ringsCategory->id,
-                'images_json' => json_encode(['/images/products/ring2.png']),
-            ],
-            
-            // Necklaces
-            [
-                'name' => 'Gold Chain Necklace',
-                'description' => 'Beautiful gold chain with intricate pendant design',
-                'price' => 185000.00,
-                'gold_weight' => '12.5',
-                'karat' => '22K',
-                'category_id' => $necklacesCategory->id,
-                'images_json' => json_encode(['/images/products/necklace1.png']),
-            ],
-            [
-                'name' => 'Heart Pendant Necklace',
-                'description' => 'Romantic heart-shaped pendant with diamonds',
-                'price' => 165000.00,
-                'gold_weight' => '10.3',
-'karat' => '22K',
-                'category_id' => $necklacesCategory->id,
-                'images_json' => json_encode(['/images/products/necklace2.png']),
-            ],
-            
-            // Bracelets
-            [
-                'name' => 'Gemstone Bracelet',
-                'description' => 'Luxury gold bracelet with precious gemstones',
-                'price' => 145000.00,
-                'gold_weight' => '8.7',
-                'karat' => '22K',
-                'category_id' => $braceletsCategory->id,
-                'images_json' => json_encode(['/images/products/bracelet1.png']),
-            ],
-            [
-                'name' => 'Traditional Gold Bangle',
-                'description' => 'Handcrafted bangle with traditional patterns',
-                'price' => 135000.00,
-                'gold_weight' => '9.2',
-                'karat' => '22K',
-                'category_id' => $braceletsCategory->id,
-                'images_json' => json_encode(['/images/products/bracelet2.png']),
-            ],
-            
-            // Earrings
-            [
-                'name' => 'Diamond Drop Earrings',
-                'description' => 'Stunning drop earrings with diamonds',
-                'price' => 75000.00,
-                'gold_weight' => '3.5',
-                'karat' => '22K',
-                'category_id' => $earringsCategory->id,
-                'images_json' => json_encode(['/images/products/earrings1.png']),
-            ],
-            [
-                'name' => 'Diamond Stud Earrings',
-                'description' => 'Classic stud earrings with sparkling diamonds',
+                'name' => 'Simple Chain Necklace',
+                'description' => 'Daily wear lightweight gold chain.',
                 'price' => 65000.00,
-                'gold_weight' => '2.8',
+                'gold_weight' => '8g',
                 'karat' => '22K',
-                'category_id' => $earringsCategory->id,
-                'images_json' => json_encode(['/images/products/earrings2.png']),
+                'stock_status' => 'in_stock',
+                'category_id' => $necklaceCat?->id,
+                'images_json' => ['/images/products/necklace2.png'],
+            ],
+             [
+                'name' => 'Charm Bracelet',
+                'description' => 'Lovely bracelet with heart-shaped charms.',
+                'price' => 85000.00,
+                'gold_weight' => '10g',
+                'karat' => '22K',
+                'stock_status' => 'low_stock',
+                'category_id' => $braceletCat?->id,
+                'images_json' => ['/images/products/bracelet1.png'],
             ],
         ];
 
         foreach ($products as $product) {
+            // Encode images array to JSON before saving (if not cast in model)
+            // But Laravel casts 'array' or 'json' handle this automatically if defined in Model casts.
+            // Let's ensure Model has casts or we manually encode.
+            // Checking Product model... it has 'casts' => ['images_json' => 'array'] usually.
+            // Assuming it does, we pass array. If not, json_encode.
+            // Let's safe side, use array, assuming model has casts.
+            
             Product::create($product);
         }
     }

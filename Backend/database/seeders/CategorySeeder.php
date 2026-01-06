@@ -2,37 +2,43 @@
 
 namespace Database\Seeders;
 
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Category;
+use Illuminate\Support\Str;
 
 class CategorySeeder extends Seeder
 {
-    public function run()
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
     {
         $categories = [
             [
                 'name' => 'Rings',
-                'slug' => 'rings',
-                'description' => 'Elegant gold rings with premium craftsmanship',
+                'description' => 'Elegant gold and diamond rings for every occasion',
             ],
             [
                 'name' => 'Necklaces',
-                'slug' => 'necklaces',
-                'description' => 'Beautiful gold necklaces for every occasion',
+                'description' => 'Stunning gold chains and necklaces',
             ],
             [
                 'name' => 'Bracelets',
-                'slug' => 'bracelets',
-                'description' => 'Stunning gold bracelets with intricate designs',
+                'description' => 'Handcrafted bracelets for men and women',
             ],
             [
                 'name' => 'Earrings',
-                'slug' => 'earrings',
-                'description' => 'Fashionable gold earrings to complete your look',
+                'description' => 'Beautiful studs and drops',
+            ],
+            [
+                'name' => 'Pendants',
+                'description' => 'Intricate pendants to match your chain',
             ],
         ];
 
         foreach ($categories as $category) {
+            $category['slug'] = Str::slug($category['name']);
             Category::create($category);
         }
     }

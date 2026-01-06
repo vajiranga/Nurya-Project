@@ -8,7 +8,9 @@ const routes = [
       { path: 'cart', component: () => import('pages/CartPage.vue') },
       { path: 'wishlist', component: () => import('pages/WishlistPage.vue') },
       { path: 'contact', component: () => import('pages/ContactUsPage.vue') },
-      { path: 'vouchers', component: () => import('pages/VouchersPage.vue') }
+      { path: 'vouchers', component: () => import('pages/VouchersPage.vue') },
+      { path: 'products', component: () => import('pages/ProductsPage.vue') },
+      { path: 'admin', component: () => import('pages/AdminPage.vue') }
     ],
   },
 

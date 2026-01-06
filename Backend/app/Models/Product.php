@@ -8,12 +8,13 @@ class Product extends Model
 {
     protected $fillable = [
         'name', 'description', 'price', 
-        'gold_weight', 'karat', 'stock_status', 
-        'images_json', 'category_id'
+        'gold_weight', 'karat', 'stock_status', 'sku',
+        'images_json', 'category_id', 'sizes'
     ];
 
     protected $casts = [
         'images_json' => 'array',
+        'sizes' => 'array',
     ];
 
     public function category()

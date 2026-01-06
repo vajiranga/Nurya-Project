@@ -226,19 +226,90 @@ const formatPrice = (price) => {
 };
 
 const getPriceRange = (product) => {
+  // Check for dynamic variants
+  if (product.sizes) {
+    let variants = [];
+    if (Array.isArray(product.sizes)) {
+      variants = product.sizes;
+    } else if (typeof product.sizes === 'string') {
+      try {
+        variants = JSON.parse(product.sizes);
+      } catch {
+        variants = [];
+      }
+    }
+
+    if (variants.length > 0) {
+      const prices = variants.map(v => Number(v.price)).filter(p => !isNaN(p));
+      if (prices.length > 0) {
+        const min = Math.min(...prices);
+        const max = Math.max(...prices);
+        
+        if (min === max) return `LKR ${formatPrice(min)}`;
+        return `LKR ${formatPrice(min)} - ${formatPrice(max)}`;
+      }
+    }
+  }
+
+  // Fallback to single base price
   if (!product.price) return 'LKR 0.00';
-  const basePrice = parseInt(product.price);
-  if (isNaN(basePrice)) return 'LKR 0.00';
-  
-  // Logic: Max adds 25,000 to base (as per ProductPage size logic)
-  const min = basePrice;
-  const max = basePrice + 25000;
-  
-  return `LKR ${formatPrice(min)} - ${formatPrice(max)}`;
+  return `LKR ${formatPrice(product.price)}`;
 };
 
 const getImage = (images) => {
-  if (Array.isArray(images) && images.length > 0) return images[0];
+  let imgArray = images;
+  
+  if (typeof images === 'string') {
+    try {
+      imgArray = JSON.parse(images);
+    } catch (e) {
+      console.error(e);
+      imgArray = [];
+    }
+  }
+
+  if (Array.isArray(imgArray) && imgArray.length > 0) {
+    const img = imgArray[0];
+    if (!img) return '/images/logo.png';
+    if (img.startsWith('http')) return img;
+    // Check if it's one of our dummy images (starts with /images/products/ and not from upload)
+    // Actually, uploaded images also start with /images/products/.
+    // We should assume ANY relative path starting with / needs backend URL unless it's in public folder of frontend.
+    // The dummy images are in Frontend public folder?
+    // Let's check 'public/images/products' in Frontend.
+    // Yes, they are.
+    // But uploaded images from backend are also path '/images/products/filename'.
+    // Conflict!
+    // If we use 'http://localhost:8000' for everything start with '/', it will break frontend assets if they are not on backend.
+    // But wait, frontend 'public' folder is served at root.
+    // So '/images/products/ring1.png' works on frontend.
+    // But uploaded image '/images/products/timestamp_name.jpg' is ONLY on backend.
+    
+    // Solution: We should rely on a pattern or simply try-error? No.
+    // Best practice: Store uploaded images with a distinct prefix or rely on full URL from backend.
+    // But since we stored as relative path...
+    // Let's assume if the filename contains 'timestamp_' (time() . '_') it is backend.
+    // Or simpler: If the generic dummy list contains it, use frontend. Else backend.
+
+    const dummyImagesCommon = [
+      '/images/products/ring1.png',
+      '/images/products/necklace1.png',
+      '/images/products/bracelet1.png',
+      '/images/products/earrings1.png',
+      '/images/products/ring2.png',
+      '/images/products/necklace2.png',
+      '/images/products/bracelet2.png',
+      '/images/products/earrings2.png',
+    ];
+
+    if (dummyImagesCommon.includes(img)) {
+       return img;
+    }
+
+    // It is likely a backend image
+    const path = img.startsWith('/') ? img : `/${img}`;
+    return `http://localhost:8000${path}`;
+  }
   
   // Use random dummy product images as fallback
   const dummyImages = [
@@ -270,8 +341,7 @@ const scrollToCollections = () => {
 };
 
 const viewAllProducts = () => {
-  selectedCategory.value = 'all';
-  // Could also navigate to a dedicated products page if you have one
+  router.push('/products');
 };
 </script>
 

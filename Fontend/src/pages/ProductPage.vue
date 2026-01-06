@@ -152,7 +152,7 @@
             </div>
 
             <!-- Size Selector -->
-            <div class="col-12">
+            <div class="col-12" v-if="sizes.length > 0">
               <div class="text-subtitle2 q-mb-sm text-grey-7">Select Size</div>
               <div class="row q-gutter-sm">
                 <q-btn 
@@ -169,27 +169,8 @@
               </div>
             </div>
 
-            <!-- Color Selector -->
-            <div class="col-12 q-mt-sm">
-              <div class="text-subtitle2 q-mb-sm text-grey-7">Metal Color</div>
-              <div class="row q-gutter-md">
-                <div 
-                  v-for="c in colors" 
-                  :key="c.value"
-                  class="color-option column items-center cursor-pointer"
-                  @click="selectedColor = c.value"
-                >
-                  <div 
-                    class="color-circle" 
-                    :style="{ background: c.hex, border: selectedColor === c.value ? '2px solid #D4AF37' : '1px solid #ddd' }"
-                  ></div>
-                  <span class="text-caption q-mt-xs" :class="selectedColor === c.value ? 'text-gold text-weight-bold' : 'text-grey'">{{ c.label }}</span>
-                </div>
-              </div>
-            </div>
-
             <!-- Quantity Selector -->
-            <div class="col-12 q-mt-sm">
+            <div class="col-12 q-mt-md">
               <div class="text-subtitle2 q-mb-sm text-grey-7">Quantity</div>
               <div class="row items-center">
                  <q-btn flat round icon="remove_circle_outline" color="grey-7" @click="quantity > 1 ? quantity-- : null" />
@@ -219,7 +200,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { api } from 'boot/axios';
@@ -240,16 +221,9 @@ const relatedProducts = ref([]);
 // Options State
 const showOptionsDialog = ref(false);
 const actionType = ref('cart'); // 'cart' or 'buy'
-const selectedSize = ref('12');
-const selectedColor = ref('gold');
-const quantity = ref(1);
+const selectedSize = ref('');
 
-const sizes = ['10', '12', '14', '16', '18', '20'];
-const colors = [
-  { label: 'Gold', value: 'gold', hex: '#D4AF37' },
-  { label: 'Rose Gold', value: 'rose', hex: '#E0BFB8' },
-  { label: 'White Gold', value: 'white', hex: '#F0F0F0' }
-];
+const quantity = ref(1);
 
 onMounted(async () => {
   try {
@@ -266,8 +240,30 @@ onMounted(async () => {
 });
 
 const images = computed(() => {
-  if (product.value && Array.isArray(product.value.images_json) && product.value.images_json.length > 0) {
-    return product.value.images_json;
+  if (product.value && product.value.images_json) {
+    let imgArray = product.value.images_json;
+    if (typeof imgArray === 'string') {
+      try { imgArray = JSON.parse(imgArray); } catch (e) { console.error(e); imgArray = []; }
+    }
+    
+    if (Array.isArray(imgArray) && imgArray.length > 0) {
+      return imgArray.map(img => {
+        if (img.startsWith('http')) return img;
+        const dum = [
+          '/images/products/ring1.png',
+          '/images/products/necklace1.png',
+          '/images/products/bracelet1.png',
+          '/images/products/earrings1.png',
+          '/images/products/ring2.png',
+          '/images/products/necklace2.png',
+          '/images/products/bracelet2.png',
+          '/images/products/earrings2.png',
+        ];
+        if (dum.includes(img)) return img;
+        const path = img.startsWith('/') ? img : `/${img}`;
+        return `http://localhost:8000${path}`;
+      });
+    }
   }
   // Fallback to local dummy images
   return [
@@ -282,25 +278,73 @@ const stockColor = computed(() => {
   return product.value?.stock_status === 'in_stock' ? 'positive' : 'negative';
 });
 
-const calculatePriceBySize = (basePrice, size) => {
+// Dynamic Variants Handling
+const dynamicVariants = computed(() => {
+  if (!product.value?.sizes) return [];
+  if (Array.isArray(product.value.sizes)) return product.value.sizes;
+  try {
+    return JSON.parse(product.value.sizes);
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
+});
+
+const availableSizes = computed(() => {
+  const dSpecs = dynamicVariants.value;
+  if (dSpecs && dSpecs.length > 0) {
+    // Return all distinct sizes present
+    const sizes = [...new Set(dSpecs.map(s => s.size).filter(s => !!s))];
+    if (sizes.length > 0) return sizes;
+  }
+  return [];
+});
+
+const sizes = availableSizes;
+watch(sizes, (newSizes) => {
+  if (newSizes.length > 0 && !selectedSize.value) {
+    selectedSize.value = newSizes[0];
+  }
+}, { immediate: true });
+
+const calculatePriceByVariant = (basePrice, size) => {
   if (!basePrice) return 0;
-  // Simple logic: Add 5000 LKR for every size step above 10
+  
+  const dSpecs = dynamicVariants.value;
+  if (dSpecs && dSpecs.length > 0) {
+    // Find precise match
+    let matched = dSpecs.find(s => s.size === size);
+    
+    return matched ? Number(matched.price) : Number(basePrice);
+  }
+
+  // Fallback Logic (Old Size logic)
   const baseSize = 10;
   const sizeInt = parseInt(size);
-  if (isNaN(sizeInt)) return basePrice;
+  if (isNaN(sizeInt)) return Number(basePrice);
   
-  const steps = (sizeInt - baseSize) / 2; // Steps: 0, 1, 2...
-  return basePrice + (steps * 5000); 
+  const steps = (sizeInt - baseSize) / 2; 
+  return Number(basePrice) + (steps * 5000); 
 };
 
 const currentPrice = computed(() => {
-  return calculatePriceBySize(product.value?.price, selectedSize.value);
+  return calculatePriceByVariant(product.value?.price, selectedSize.value);
 });
 
 const priceRange = computed(() => {
   if (!product.value?.price) return '0.00';
-  const min = calculatePriceBySize(product.value.price, '10');
-  const max = calculatePriceBySize(product.value.price, '20');
+  
+  const dSpecs = dynamicVariants.value;
+  if (dSpecs && dSpecs.length > 0) {
+    const prices = dSpecs.map(s => Number(s.price));
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    if (min === max) return formatPrice(min);
+    return `${formatPrice(min)} - ${formatPrice(max)}`;
+  }
+
+  const min = calculatePriceByVariant(product.value.price, '10');
+  const max = calculatePriceByVariant(product.value.price, '20');
   return `${formatPrice(min)} - ${formatPrice(max)}`;
 });
 
@@ -319,7 +363,6 @@ const confirmAction = () => {
   
   const options = {
     size: selectedSize.value,
-    color: selectedColor.value,
     quantity: quantity.value,
     price: currentPrice.value // Pass calculated price
   };
