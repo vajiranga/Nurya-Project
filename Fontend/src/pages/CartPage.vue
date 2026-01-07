@@ -100,30 +100,30 @@
                 <span>- LKR {{ formatPrice(discount) }}</span>
               </div>
 
-              <div class="row justify-between q-mb-sm text-grey-6">
-                <span>Shipping</span>
-                <span>Calculated at checkout</span>
+              <div class="row justify-between q-mb-sm text-grey-7">
+                <span>Shipping Fee</span>
+                <span>LKR {{ formatPrice(currentShippingFee) }}</span>
               </div>
               
               <q-separator class="q-my-md" />
               
               <div class="row justify-between items-center">
                 <span class="text-h6">Total</span>
-                <span class="text-h5 text-gold text-weight-bold">LKR {{ formatPrice(cartStore.totalAmount - discount) }}</span>
+                <span class="text-h5 text-gold text-weight-bold">LKR {{ formatPrice(cartStore.totalAmount - discount + currentShippingFee) }}</span>
               </div>
             </q-card-section>
 
             <q-card-actions class="q-pa-md">
-              <q-btn 
-                block 
-                unelevated 
-                rounded 
-                color="green-7" 
-                size="lg" 
-                class="full-width q-mb-sm"
+              <q-btn
+                unelevated
+                rounded
+                color="green-7"
+                class="full-width q-mb-sm q-py-sm text-weight-bold"
+                size="lg"
                 icon="whatsapp"
-                label="Place Order via WhatsApp"
-                @click="checkoutWhatsApp"
+                no-caps
+                label="Place Order"
+                @click="showDetailsDialog = true"
               />
               <q-btn flat color="grey-7" label="Continue Shopping" to="/" class="full-width" />
             </q-card-actions>
@@ -136,41 +136,212 @@
     <q-dialog v-model="showDetailsDialog" persistent transition-show="scale" transition-hide="scale">
       <q-card class="order-dialog-card q-pa-lg">
         <q-card-section class="row items-center q-pb-none">
-          <div class="text-h5 font-playfair text-gold">Delivery Details</div>
+          <div class="text-h5 font-playfair text-gold">Checkout Details</div>
           <q-space />
           <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
 
         <q-card-section class="q-pt-md">
           <p class="text-grey-7">Please provide your details to process the order via WhatsApp.</p>
-          <div class="q-gutter-md">
+          <div>
+            <!-- Full Name -->
             <q-input
-              v-model="form.name"
-              label="Full Name"
+              v-model="form.fullName"
+              label="Full Name *"
               outlined
-              dense
-              bg-color="grey-1"
-              :rules="[val => !!val || 'Name is required']"
+              bg-color="white"
+              color="gold"
+              label-color="grey-9"
+              input-class="text-black"
+              :rules="[val => !!val || 'Full Name is required']"
+              hide-bottom-space
+              class="q-mb-md"
             />
+
+            <!-- Mobile Numbers -->
+            <div class="row q-col-gutter-md q-mb-md">
+              <div class="col-12 col-md-6">
+                <q-input
+                  v-model="form.primaryPhone"
+                  label="Primary Mobile Number *"
+                  outlined
+                  mask="##########"
+                  bg-color="white"
+                  color="gold"
+                  label-color="grey-9"
+                  input-class="text-black"
+                  :rules="[val => !!val || 'Primary Mobile is required']"
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-12 col-md-6">
+                <q-input
+                  v-model="form.secondaryPhone"
+                  label="Secondary Mobile (Optional)"
+                  outlined
+                  mask="##########"
+                  bg-color="white"
+                  color="gold"
+                  label-color="grey-9"
+                  input-class="text-black"
+                  hide-bottom-space
+                />
+              </div>
+            </div>
+
+            <!-- Address Section -->
             <q-input
-              v-model="form.phone"
-              label="WhatsApp Phone Number"
+              v-model="form.addressLine1"
+              label="Address Line 1 *"
               outlined
-              dense
-              mask="##########"
-              bg-color="grey-1"
-              placeholder="0712345678"
-              :rules="[val => !!val || 'Phone number is required']"
+              bg-color="white"
+              color="gold"
+              label-color="grey-9"
+              input-class="text-black"
+              :rules="[val => !!val || 'Address Line 1 is required']"
+              hide-bottom-space
+              class="q-mb-md"
             />
+            
             <q-input
-              v-model="form.address"
-              label="Delivery Address"
+              v-model="form.addressLine2"
+              label="Address Line 2 (Optional)"
               outlined
-              dense
+              bg-color="white"
+              color="gold"
+              label-color="grey-9"
+              input-class="text-black"
+              hide-bottom-space
+              class="q-mb-md"
+            />
+
+            <div class="row q-col-gutter-md q-mb-md">
+              <div class="col-12 col-md-6">
+                 <q-input
+                  v-model="form.city"
+                  label="City *"
+                  outlined
+                  bg-color="white"
+                  color="gold"
+                  label-color="grey-9"
+                  input-class="text-black"
+                  :rules="[val => !!val || 'City is required']"
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-12 col-md-6">
+                 <q-input
+                  v-model="form.district"
+                  label="District *"
+                  outlined
+                  bg-color="white"
+                  color="gold"
+                  label-color="grey-9"
+                  input-class="text-black"
+                  :rules="[val => !!val || 'District is required']"
+                  hide-bottom-space
+                />
+              </div>
+            </div>
+
+            <q-input
+              v-model="form.postalCode"
+              label="Postal Code *"
+              outlined
+              bg-color="white"
+              color="gold"
+              label-color="grey-9"
+              input-class="text-black"
+              mask="#####"
+              :rules="[val => !!val || 'Postal Code is required']"
+              hide-bottom-space
+              class="q-mb-md"
+            />
+
+            <!-- Special Notes -->
+            <q-input
+              v-model="form.specialNotes"
+              label="Special Notes (Optional)"
+              outlined
               type="textarea"
-              bg-color="grey-1"
-              :rules="[val => !!val || 'Address is required']"
+              rows="3"
+              bg-color="white"
+              color="gold"
+              label-color="grey-9"
+              input-class="text-black"
+              hide-bottom-space
             />
+
+            <!-- Payment Method -->
+            <div class="q-mt-lg">
+              <div class="text-subtitle1 q-mb-sm text-gold font-family-playfair">Payment Method</div>
+              <q-list class="q-gutter-y-sm">
+                
+                <!-- COD Option -->
+                <q-item 
+                  tag="label" 
+                  v-ripple 
+                  class="rounded-borders q-pa-md transition-all"
+                  :class="form.paymentMethod === 'cod' ? 'bg-amber-1 border-gold' : 'bg-white'"
+                >
+                  <q-item-section avatar>
+                    <q-radio v-model="form.paymentMethod" val="cod" color="gold" size="md" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold text-black text-subtitle1">Cash On Delivery (COD)</q-item-label>
+                    <q-item-label caption class="text-grey-8">Pay when you receive the package</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-badge color="grey-8" label="LKR 400" />
+                  </q-item-section>
+                </q-item>
+
+                <!-- Store Pickup Option -->
+                <q-item 
+                  tag="label" 
+                  v-ripple 
+                  class="rounded-borders q-pa-md transition-all"
+                  :class="form.paymentMethod === 'pickup' ? 'bg-amber-1 border-gold' : 'bg-white'"
+                >
+                  <q-item-section avatar>
+                    <q-radio v-model="form.paymentMethod" val="pickup" color="gold" size="md" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold text-black text-subtitle1">Pick up from Store</q-item-label>
+                    <q-item-label caption class="text-grey-8">Come to our store and collect</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-badge color="green" label="FREE" />
+                  </q-item-section>
+                </q-item>
+
+                <!-- Bank Transfer Option -->
+                <q-item 
+                  tag="label" 
+                  v-ripple 
+                  class="rounded-borders q-pa-md transition-all"
+                  :class="form.paymentMethod === 'bank_transfer' ? 'bg-amber-1 border-gold' : 'bg-white'"
+                >
+                  <q-item-section avatar>
+                    <q-radio v-model="form.paymentMethod" val="bank_transfer" color="gold" size="md" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold text-black text-subtitle1">Bank Transfer</q-item-label>
+                    <q-item-label caption class="text-grey-8">Transfer to our bank account</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+              </q-list>
+
+              <!-- Bank Transfer Note -->
+              <transition name="fade">
+                  <div v-if="form.paymentMethod === 'bank_transfer'" class="q-mt-sm bg-red-1 q-pa-md rounded-borders text-center text-red-9 border-red">
+                    <q-icon name="warning" size="sm" class="q-mr-sm" />
+                    <b>Action Required:</b> Please wait for our confirmation on WhatsApp before transferring funds.
+                  </div>
+              </transition>
+            </div>
+
           </div>
         </q-card-section>
 
@@ -179,7 +350,7 @@
             unelevated 
             rounded 
             color="green-6" 
-            icon="wechat" 
+            icon="send" 
             label="Send Order to WhatsApp" 
             size="lg"
             class="full-width whatsapp-submit-btn"
@@ -203,12 +374,26 @@ const $q = useQuasar();
 
 const couponCode = ref('');
 const discount = ref(0);
+// Base shipping fee
+const baseShippingFee = 400;
 
 const showDetailsDialog = ref(false);
 const form = ref({
-  name: '',
-  phone: '',
-  address: ''
+  fullName: '',
+  primaryPhone: '',
+  secondaryPhone: '',
+  addressLine1: '',
+  addressLine2: '',
+  city: '',
+  district: '',
+  postalCode: '',
+  specialNotes: '',
+  paymentMethod: 'cod'
+});
+
+// Computed Shipping Fee
+const currentShippingFee = computed(() => {
+  return form.value.paymentMethod === 'pickup' ? 0 : baseShippingFee;
 });
 
 const formatPrice = (price) => {
@@ -246,45 +431,62 @@ const applyCoupon = () => {
   }
 };
 
-const checkoutWhatsApp = () => {
-  const phone = '94712345678'; // Replace with your WhatsApp number
-  let message = `*New Order from Nurya Jewellery*\n\n`;
-  
-  cartStore.items.forEach((item, index) => {
-    message += `${index + 1}. ${item.name} (${item.size ? 'Size: ' + item.size : 'Std'}) - ${item.quantity} x LKR ${formatPrice(item.price)}\n`;
-  });
-  
-  message += `\n*Subtotal:* LKR ${formatPrice(cartStore.totalAmount)}`;
-  if (discount.value > 0) {
-    message += `\n*Discount:* -LKR ${formatPrice(discount.value)} (Code: ${couponCode.value})`;
-  }
-  message += `\n*Total:* LKR ${formatPrice(cartStore.totalAmount - discount.value)}\n\nPlease confirm my order.`;
-  
-  const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-  window.open(url, '_blank');
-};
 
 const isValid = computed(() => {
-  return form.value.name.length > 2 && form.value.phone.length === 10 && form.value.address.length > 5;
+  if (!form.value) return false;
+  return (form.value.fullName?.length > 2) && 
+         (form.value.primaryPhone?.length >= 9) && 
+         (form.value.addressLine1?.length > 3) &&
+         (form.value.city?.length > 2) &&
+         (form.value.district?.length > 2) &&
+         (form.value.postalCode?.length > 2);
 });
 
 const submitOrder = async () => {
-  $q.loading.show({ message: 'Establishing secure connection...' });
+  console.log('submitOrder called');
+  
+  if (!api) {
+    console.error('API client is not defined!');
+    $q.notify({ type: 'negative', message: 'System Error: API Client missing' });
+    return;
+  }
+
   try {
+    $q.loading.show({ message: 'Preparing your order...' });
+
+    const fullAddress = [
+      form.value.addressLine1,
+      form.value.addressLine2,
+      form.value.city,
+      form.value.district,
+      form.value.postalCode
+    ].filter(Boolean).join(', ');
+
     const payload = {
-      customer_name: form.value.name,
-      phone: form.value.phone,
-      address: form.value.address,
+      customer_name: form.value.fullName,
+      phone: form.value.primaryPhone,
+      secondary_phone: form.value.secondaryPhone,
+      address: fullAddress,
+      special_notes: form.value.specialNotes,
+      payment_method: form.value.paymentMethod,
+      shipping_fee: currentShippingFee.value,
+      coupon_code: discount.value > 0 ? couponCode.value : null,
+      discount_amount: discount.value,
       items: cartStore.items.map(i => ({
+        id: i.id,
         name: i.name,
-        price: parseFloat(i.price),
-        quantity: i.quantity
+        price: parseFloat(i.price) || 0,
+        quantity: parseInt(i.quantity) || 1,
+        size: i.size || ''
       }))
     };
+    
+    console.log('Order Payload:', payload);
 
     const res = await api.post('/order/whatsapp', payload);
+    console.log('API Response:', res);
     
-    if (res.data.success) {
+    if (res.data && res.data.success) {
       $q.notify({
         type: 'positive',
         message: 'Order initiated! Redirecting to WhatsApp...',
@@ -293,13 +495,19 @@ const submitOrder = async () => {
       
       cartStore.clearCart();
       showDetailsDialog.value = false;
-      window.open(res.data.whatsapp_link, '_blank');
+      
+      // Small delay to ensure notify is seen
+      setTimeout(() => {
+        window.open(res.data.whatsapp_link, '_blank');
+      }, 500);
+    } else {
+      throw new Error('API returned success:false or invalid response');
     }
   } catch (error) {
-    console.error(error);
+    console.error('Order Submission Error:', error);
     $q.notify({
       type: 'negative',
-      message: 'Failed to process order. Please try again.',
+      message: 'Failed to process order. Please try again or contact support.',
       icon: 'error'
     });
   } finally {
@@ -450,9 +658,25 @@ body.body--dark .summary-card {
   .item-name {
     font-size: 1.1rem;
   }
-  
+
   .order-dialog-card {
     min-width: 90vw;
   }
+}
+
+.border-gold {
+  border: 1px solid #D4AF37;
+}
+
+.border-red {
+  border: 1px solid #e57373;
+}
+
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+.font-family-playfair {
+  font-family: 'Playfair Display', serif;
 }
 </style>
