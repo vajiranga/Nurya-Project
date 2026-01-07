@@ -10,20 +10,20 @@
       <div class="row q-col-gutter-lg">
         <!-- Sidebar / Filters -->
         <div class="col-12 col-md-3" data-aos="fade-right">
-           <q-card flat class="filter-card">
+            <q-card flat class="filter-card">
               <q-card-section>
                 <div class="text-h6 font-playfair q-mb-md text-gold">Categories</div>
                 <q-list separator>
                    <q-item 
                      clickable 
                      v-ripple
-                     :active="selectedCategory === 'all'"
+                     :active="filterStore.selectedCategory === 'all'"
                      active-class="text-gold text-weight-bold"
-                     @click="selectedCategory = 'all'"
+                     @click="filterStore.selectedCategory = 'all'"
                      class="category-item"
                    >
                      <q-item-section>All Categories</q-item-section>
-                     <q-item-section side v-if="selectedCategory === 'all'">
+                     <q-item-section side v-if="filterStore.selectedCategory === 'all'">
                         <q-icon name="check" size="xs" color="gold" />
                      </q-item-section>
                    </q-item>
@@ -32,13 +32,13 @@
                      :key="cat.id"
                      clickable 
                      v-ripple
-                     :active="selectedCategory === cat.id"
+                     :active="filterStore.selectedCategory === cat.id"
                      active-class="text-gold text-weight-bold"
-                     @click="selectedCategory = cat.id"
+                     @click="filterStore.selectedCategory = cat.id"
                      class="category-item"
                    >
                      <q-item-section>{{ cat.name }}</q-item-section>
-                     <q-item-section side v-if="selectedCategory === cat.id">
+                     <q-item-section side v-if="filterStore.selectedCategory === cat.id">
                         <q-icon name="check" size="xs" color="gold" />
                      </q-item-section>
                    </q-item>
@@ -134,37 +134,23 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { api } from 'boot/axios';
 import { useWishlistStore } from 'stores/wishlist';
 import { useQuasar } from 'quasar';
+import { useFilterStore } from 'stores/filter';
 
 const router = useRouter();
+const route = useRoute();
 const $q = useQuasar();
 const wishlistStore = useWishlistStore();
+const filterStore = useFilterStore();
 
-const categories = ref([]);
+const categories = ref([]); // We can still fetch valid categories or use store if it fetches
 const products = ref([]);
-const selectedCategory = ref('all');
 const loading = ref(true);
 
-const features = [
-  {
-    icon: 'verified',
-    title: 'Certified Quality',
-    description: '100% authentic gold with certification'
-  },
-  {
-    icon: 'local_shipping',
-    title: 'Secure Delivery',
-    description: 'Safe and timely delivery to your doorstep'
-  },
-  {
-    icon: 'workspace_premium',
-    title: 'Premium Designs',
-    description: 'Exclusive and unique handcrafted designs'
-  }
-];
+// ... (features array)
 
 onMounted(async () => {
   try {
@@ -173,23 +159,72 @@ onMounted(async () => {
       api.get('/products')
     ]);
     categories.value = catRes.data;
-    products.value = prodRes.data;
+    products.value = prodRes.data; // Store full list locally to filter against
+
+    // Sync Query Params to Store if present (handling Deep Links / Refreshes)
+    if (Object.keys(route.query).length > 0) {
+        if (route.query.category) filterStore.selectedCategory = route.query.category.toString(); // Ensure string if ID
+        if (route.query.min_price) filterStore.priceRange.min = Number(route.query.min_price);
+        if (route.query.max_price) filterStore.priceRange.max = Number(route.query.max_price);
+        if (route.query.sort) filterStore.sortBy = route.query.sort;
+    }
+
   } catch (error) {
     console.error('Error fetching data:', error);
   } finally {
     loading.value = false;
   }
-
-  // Refresh AOS if it exists
-  setTimeout(() => {
-     if (window.AOS) window.AOS.refresh();
-  }, 500);
+  
+  // ... (AOS refresh)
 });
 
 const filteredProducts = computed(() => {
-  if (selectedCategory.value === 'all') return products.value;
-  return products.value.filter((p) => p.category_id === selectedCategory.value);
+  let result = products.value;
+
+  // 1. Filter by Category
+  if (filterStore.selectedCategory !== 'all') {
+    // Determine type equality. filterStore uses string/number depending on input but typically ids are numbers.
+    // Let's use loose equality for safety or convert.
+    result = result.filter((p) => p.category_id == filterStore.selectedCategory);
+  }
+
+  // 2. Filter by Price
+  result = result.filter(p => {
+    const price = getProductPrice(p);
+    return price >= filterStore.priceRange.min && price <= filterStore.priceRange.max;
+  });
+
+  // 3. Sort
+  if (filterStore.sortBy === 'price_asc') {
+    result.sort((a, b) => getProductPrice(a) - getProductPrice(b));
+  } else if (filterStore.sortBy === 'price_desc') {
+    result.sort((a, b) => getProductPrice(b) - getProductPrice(a));
+  } else if (filterStore.sortBy === 'newest') {
+    result.sort((a, b) => b.id - a.id);
+  }
+
+  return result;
 });
+
+const getProductPrice = (product) => {
+  // Helper to get a representational price for sorting/filtering
+  if (product.price) return parseFloat(product.price);
+  
+  // Handle variants
+  if (product.sizes) {
+    let variants = [];
+    if (Array.isArray(product.sizes)) variants = product.sizes;
+    else if (typeof product.sizes === 'string') {
+      try { variants = JSON.parse(product.sizes); } catch { return 0; }
+    }
+    
+    if (variants.length > 0) {
+      const prices = variants.map(v => Number(v.price)).filter(p => !isNaN(p));
+      return prices.length > 0 ? Math.min(...prices) : 0;
+    }
+  }
+  return 0;
+};
 
 const goToProduct = (id) => {
   router.push(`/product/${id}`);

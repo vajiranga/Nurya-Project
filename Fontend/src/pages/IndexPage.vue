@@ -32,51 +32,42 @@
         <p class="section-subtitle">Premium selection of our finest creations</p>
       </div>
 
-      <!-- Category Filters (Moved logic from Best Products) -->
-      <div class="category-filters" data-aos="fade-up">
-        <q-chip
-          v-for="cat in [{ id: 'all', name: 'All' }, ...categories]"
-          :key="cat.id"
-          :selected="selectedCategory === cat.id"
-          @click="selectCategory(cat.id)"
-          clickable
-          :color="selectedCategory === cat.id ? 'primary' : 'grey-3'"
-          :text-color="selectedCategory === cat.id ? 'white' : 'grey-8'"
-          size="md"
-          class="filter-chip"
-        >
-          {{ cat.name }}
-        </q-chip>
-      </div>
-
       <!-- Products Grid -->
-      <div v-if="!loading" class="products-grid">
-        <div 
-          v-for="(product, index) in filteredProducts.slice(0, 8)" 
-          :key="product.id"
-          class="product-card"
-          @click="goToProduct(product.id)"
-          data-aos="fade-up"
-          :data-aos-delay="index * 50"
-        >
-          <div class="product-image-wrapper">
-            <img :src="getImage(product.images_json)" :alt="product.name" class="product-image" />
-            <div class="product-overlay">
-              <q-btn 
-                round 
-                color="white"
-                text-color="primary"
-                icon="visibility" 
-                size="md"
-                class="view-btn"
-              />
+      <div v-if="!loading" class="products-container">
+        <div v-if="filteredProducts.length > 0" class="products-grid">
+          <div 
+            v-for="(product, index) in filteredProducts.slice(0, 8)" 
+            :key="product.id"
+            class="product-card"
+            @click="goToProduct(product.id)"
+            data-aos="fade-up"
+            :data-aos-delay="index * 50"
+          >
+            <div class="product-image-wrapper">
+              <img :src="getImage(product.images_json)" :alt="product.name" class="product-image" />
+              <div class="product-overlay">
+                <q-btn 
+                  round 
+                  color="white"
+                  text-color="primary"
+                  icon="visibility" 
+                  size="md"
+                  class="view-btn"
+                />
+              </div>
+            </div>
+            <div class="product-details">
+              <h3 class="product-name">{{ product.name }}</h3>
+              <!-- Price Range Display -->
+              <p class="product-price">{{ getPriceRange(product) }}</p>
             </div>
           </div>
-          <div class="product-details">
-            <h3 class="product-name">{{ product.name }}</h3>
-            <!-- Price Range Display -->
-            <p class="product-price">{{ getPriceRange(product) }}</p>
-          </div>
+        </div>
+        
+        <div v-else class="text-center q-pa-xl">
+            <q-icon name="sentiment_dissatisfied" size="4em" color="grey-4" />
+            <h3 class="text-grey-6 text-h5">No products found within this range.</h3>
+            <q-btn flat color="gold" label="Clear Filters" @click="resetFilters" />
         </div>
       </div>
 
@@ -86,7 +77,7 @@
       </div>
 
       <!-- View All Button -->
-      <div class="view-all-wrapper" data-aos="fade-up">
+      <div class="view-all-wrapper" data-aos="fade-up" v-if="filteredProducts.length > 0">
         <q-btn 
           outline
           rounded
@@ -149,11 +140,13 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from 'boot/axios';
+import { useFilterStore } from 'stores/filter';
+import { useVoucherStore } from 'stores/voucher';
 
 const router = useRouter();
-const categories = ref([]);
+const filterStore = useFilterStore();
+const voucherStore = useVoucherStore();
 const products = ref([]);
-const selectedCategory = ref('all');
 const loading = ref(true);
 
 const features = [
@@ -174,18 +167,19 @@ const features = [
   }
 ];
 
-const vouchers = [
-  {
-    discount: '10%',
-    title: 'New Year Special',
-    code: 'NURYA2026'
-  },
-  {
-    discount: 'LKR 5000',
-    title: 'Wedding Collection Offer',
-    code: 'WEDDING24'
+const vouchers = computed(() => {
+  if (voucherStore.activeVouchers.length > 0) {
+    return voucherStore.activeVouchers.slice(0, 2).map(v => ({
+      title: v.title,
+      code: v.code,
+      discount: v.discount_type === 'percentage' ? `${parseInt(v.discount_value)}%` : `LKR ${v.discount_value}`
+    }));
   }
-];
+  // Fallback / Loading state handled by v-if or just show empty if store is loading
+  // But since we mount fetch in layout, it should be available.
+  // Returning empty array if no vouchers found to avoid breaking UI with hardcoded ones.
+  return [];
+});
 
 const copyCode = (code) => {
   navigator.clipboard.writeText(code);
@@ -194,11 +188,7 @@ const copyCode = (code) => {
 
 onMounted(async () => {
   try {
-    const [catRes, prodRes] = await Promise.all([
-      api.get('/categories'),
-      api.get('/products')
-    ]);
-    categories.value = catRes.data;
+    const prodRes = await api.get('/products');
     products.value = prodRes.data;
   } catch (error) {
     console.error('Error fetching data:', error);
@@ -217,9 +207,15 @@ onMounted(async () => {
 });
 
 const filteredProducts = computed(() => {
-  if (selectedCategory.value === 'all') return products.value;
-  return products.value.filter((p) => p.category_id === selectedCategory.value);
+  // Just return products, maybe limited or sorted by default if desired.
+  // User wants Home Page NOT to update with filters.
+  return products.value;
 });
+
+
+const resetFilters = () => {
+  filterStore.resetFilters();
+};
 
 const formatPrice = (price) => {
   return new Intl.NumberFormat('en-LK').format(price);
@@ -272,24 +268,6 @@ const getImage = (images) => {
     const img = imgArray[0];
     if (!img) return '/images/logo.png';
     if (img.startsWith('http')) return img;
-    // Check if it's one of our dummy images (starts with /images/products/ and not from upload)
-    // Actually, uploaded images also start with /images/products/.
-    // We should assume ANY relative path starting with / needs backend URL unless it's in public folder of frontend.
-    // The dummy images are in Frontend public folder?
-    // Let's check 'public/images/products' in Frontend.
-    // Yes, they are.
-    // But uploaded images from backend are also path '/images/products/filename'.
-    // Conflict!
-    // If we use 'http://localhost:8000' for everything start with '/', it will break frontend assets if they are not on backend.
-    // But wait, frontend 'public' folder is served at root.
-    // So '/images/products/ring1.png' works on frontend.
-    // But uploaded image '/images/products/timestamp_name.jpg' is ONLY on backend.
-    
-    // Solution: We should rely on a pattern or simply try-error? No.
-    // Best practice: Store uploaded images with a distinct prefix or rely on full URL from backend.
-    // But since we stored as relative path...
-    // Let's assume if the filename contains 'timestamp_' (time() . '_') it is backend.
-    // Or simpler: If the generic dummy list contains it, use frontend. Else backend.
 
     const dummyImagesCommon = [
       '/images/products/ring1.png',
@@ -331,17 +309,20 @@ const goToProduct = (id) => {
   router.push(`/product/${id}`);
 };
 
-const selectCategory = (categoryId) => {
-  selectedCategory.value = categoryId;
-  document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
+const viewAllProducts = () => {
+  router.push({
+    path: '/products',
+    query: {
+      category: filterStore.selectedCategory !== 'all' ? filterStore.selectedCategory : undefined,
+      min_price: filterStore.priceRange.min > 0 ? filterStore.priceRange.min : undefined,
+      max_price: filterStore.priceRange.max < 500000 ? filterStore.priceRange.max : undefined,
+      sort: filterStore.sortBy !== 'default' ? filterStore.sortBy : undefined
+    }
+  });
 };
 
 const scrollToCollections = () => {
   document.getElementById('collections')?.scrollIntoView({ behavior: 'smooth' });
-};
-
-const viewAllProducts = () => {
-  router.push('/products');
 };
 </script>
 
@@ -574,23 +555,58 @@ body.body--dark .best-products {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
-.category-filters {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-bottom: 3rem;
+/* Sidebar Styles */
+.sidebar-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  position: sticky;
+  top: 100px;
 }
 
-.filter-chip {
-  font-weight: 600;
+body.body--dark .sidebar-card {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.sidebar-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem;
+  margin: 0 0 1rem 0;
+  font-weight: 700;
+  color: #333;
+}
+
+body.body--dark .sidebar-title {
+  color: #D4AF37;
+}
+
+.category-list {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.category-item {
+  border-radius: 8px;
+  margin-bottom: 4px;
+  color: #555;
   transition: all 0.3s ease;
-  cursor: pointer;
 }
 
-.filter-chip:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+body.body--dark .category-item {
+  color: #aaa;
+}
+
+.category-item:hover {
+  background: rgba(212, 175, 55, 0.05);
+  color: #D4AF37;
+}
+
+.active-category {
+  background: rgba(212, 175, 55, 0.1) !important;
+  color: #D4AF37 !important;
+  font-weight: 600;
 }
 
 .products-grid {

@@ -71,27 +71,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { api } from 'boot/axios';
+import { onMounted, computed } from 'vue';
 import { useQuasar, date } from 'quasar';
+import { useVoucherStore } from 'stores/voucher';
 
 const $q = useQuasar();
-const vouchers = ref([]);
-const loading = ref(true);
+const voucherStore = useVoucherStore();
+// Use store state instead of local
+const vouchers = computed(() => voucherStore.activeVouchers);
+const loading = computed(() => voucherStore.loading);
 
-onMounted(async () => {
-  try {
-    const response = await api.get('/vouchers');
-    vouchers.value = response.data;
-  } catch (error) {
-    console.error('Error fetching vouchers:', error);
-    $q.notify({
-      message: 'Failed to load vouchers',
-      color: 'negative',
-      icon: 'error'
-    });
-  } finally {
-    loading.value = false;
+onMounted(() => {
+  if (!voucherStore.hasVouchers) {
+      voucherStore.fetchVouchers();
   }
 });
 

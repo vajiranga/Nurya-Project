@@ -13,6 +13,19 @@
           class="lt-md color-gold"
         />
 
+        <!-- Filter Toggle Button (Desktop/Tablet) -->
+        <q-btn 
+           flat 
+           dense
+           round
+           icon="tune" 
+           @click="filterStore.toggleDrawer"
+           class="gt-xs color-gold q-mr-sm"
+           v-if="showFilterButton"
+        >
+          <q-tooltip>Filter & Sort</q-tooltip>
+        </q-btn>
+
         <q-toolbar-title class="brand-logo-wrapper row items-center no-wrap" @click="$router.push('/')">
           <!-- Logo Image -->
           <img src="/logo.png" alt="Nurya Jewellery" class="brand-logo q-mr-sm" />
@@ -27,7 +40,7 @@
         <!-- Desktop Navigation Items -->
         <div class="gt-sm q-gutter-md row items-center no-wrap">
           <q-btn flat no-caps label="Home" to="/" class="nav-link" />
-          <q-btn flat no-caps label="Collections" @click="scrollTo('collections')" class="nav-link" />
+          <q-btn flat no-caps label="Collections" to="/products" class="nav-link" />
           <q-btn flat no-caps label="Vouchers" to="/vouchers" class="nav-link">
             <q-badge color="gold" floating text-color="black">Sale</q-badge>
           </q-btn>
@@ -105,7 +118,7 @@
           <q-item-section>Home</q-item-section>
         </q-item>
 
-        <q-item clickable v-ripple @click="scrollTo('collections')">
+        <q-item clickable v-ripple to="/products">
           <q-item-section avatar><q-icon name="grid_view" color="gold" /></q-item-section>
           <q-item-section>Collections</q-item-section>
         </q-item>
@@ -125,6 +138,170 @@
       </q-list>
     </q-drawer>
 
+    <!-- Filter Drawer (Left Side) -->
+    <q-drawer
+      v-model="filterStore.isDrawerOpen"
+      side="left"
+      overlay
+      behavior="mobile"
+      bordered
+      :class="$q.dark.isActive ? 'bg-dark' : 'bg-white'"
+      :width="320"
+      class="filter-drawer column"
+    >
+      <!-- Drawer Header -->
+      <div class="drawer-header q-pa-md row items-center justify-between border-bottom-gold">
+        <h3 class="text-h6 q-my-none font-playfair text-weight-bold" :class="$q.dark.isActive ? 'text-gold' : 'text-dark'">
+          Filter & Sort
+        </h3>
+        <q-btn flat round dense icon="close" @click="filterStore.toggleDrawer" :color="$q.dark.isActive ? 'white' : 'grey-8'" />
+      </div>
+
+      <!-- Scrollable Content -->
+      <q-scroll-area class="col q-px-md q-py-sm">
+        
+        <!-- Categories Section -->
+        <div class="sidebar-section q-mb-lg">
+          <h4 class="text-subtitle1 text-weight-bold q-mb-sm text-uppercase" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-9'">
+            Categories
+          </h4>
+          <q-list class="category-list">
+            <q-item 
+              clickable 
+              v-ripple 
+              :active="filterStore.selectedCategory === 'all'"
+              @click="filterStore.selectedCategory = 'all'"
+              active-class="active-category"
+              class="category-item rounded-borders q-mb-xs transition-any"
+              :class="$q.dark.isActive ? 'text-grey-3' : 'text-grey-8'"
+            >
+              <q-item-section avatar>
+                <q-icon name="grid_view" size="xs" />
+              </q-item-section>
+              <q-item-section class="text-weight-medium">All Jewellery</q-item-section>
+            </q-item>
+
+            <q-separator class="q-my-xs opacity-50" />
+
+            <q-item 
+              v-for="cat in filterStore.categories" 
+              :key="cat.id"
+              clickable 
+              v-ripple
+              :active="filterStore.selectedCategory === cat.id"
+              @click="filterStore.selectedCategory = cat.id"
+              active-class="active-category"
+              class="category-item rounded-borders q-mb-xs transition-any"
+              :class="$q.dark.isActive ? 'text-grey-3' : 'text-grey-8'"
+            >
+              <q-item-section avatar>
+                <q-icon name="diamond" size="xs" />
+              </q-item-section>
+              <q-item-section class="text-weight-medium">{{ cat.name }}</q-item-section>
+              <q-item-section side v-if="filterStore.selectedCategory === cat.id">
+                <q-icon name="check" color="gold" size="xs" />
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </div>
+
+        <q-separator class="q-mb-lg opacity-50" />
+
+        <!-- Price Range Section -->
+        <div class="sidebar-section q-mb-lg">
+          <h4 class="text-subtitle1 text-weight-bold q-mb-md text-uppercase" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-9'">
+            Price Range
+          </h4>
+          
+          <div class="price-inputs row q-col-gutter-sm q-mb-md">
+            <div class="col-6">
+              <q-input 
+                outlined 
+                dense 
+                v-model.number="filterStore.priceRange.min" 
+                label="Min" 
+                prefix="LKR"
+                :color="$q.dark.isActive ? 'gold' : 'primary'"
+                class="price-input"
+              />
+            </div>
+            <div class="col-6">
+              <q-input 
+                outlined 
+                dense 
+                v-model.number="filterStore.priceRange.max" 
+                label="Max" 
+                prefix="LKR"
+                :color="$q.dark.isActive ? 'gold' : 'primary'"
+                class="price-input"
+              />
+            </div>
+          </div>
+
+          <q-range
+            v-model="filterStore.priceRange"
+            :min="0"
+            :max="500000"
+            :step="5000"
+            label
+            color="gold"
+            track-color="grey-4"
+            thumb-size="18px"
+            thumb-color="white"
+            class="q-px-sm"
+          />
+          <div class="row justify-between text-caption text-grey-6 q-mt-sm">
+             <span>LKR 0</span>
+             <span>LKR 500k+</span>
+          </div>
+        </div>
+
+        <q-separator class="q-mb-lg opacity-50" />
+
+        <!-- Sort Section -->
+        <div class="sidebar-section q-mb-xl">
+           <h4 class="text-subtitle1 text-weight-bold q-mb-sm text-uppercase" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-9'">
+             Sort By
+           </h4>
+           <q-select 
+             outlined 
+             dense 
+             v-model="filterStore.sortBy" 
+             :options="filterStore.sortOptions" 
+             emit-value 
+             map-options 
+             class="sort-select"
+             color="gold"
+             popup-content-class="text-weight-medium"
+           >
+             <template v-slot:prepend>
+               <q-icon name="sort" color="gold" />
+             </template>
+           </q-select>
+        </div>
+      </q-scroll-area>
+
+      <!-- Sticky Footer -->
+      <div class="drawer-footer q-pa-md bg-white border-top-gold" :class="$q.dark.isActive ? 'bg-dark-page' : 'bg-white'">
+        <div class="row q-gutter-md">
+          <q-btn 
+            outline 
+            :color="$q.dark.isActive ? 'gold' : 'black'"
+            label="Reset" 
+            class="col-4" 
+            @click="filterStore.resetFilters" 
+          />
+          <q-btn 
+            unelevated 
+            color="black" 
+            label="Show Results" 
+            class="col" 
+            @click="viewResults"
+          />
+        </div>
+      </div>
+    </q-drawer>
+
     <q-page-container>
       <router-view />
       
@@ -133,20 +310,19 @@
         <div class="container q-py-xl">
           <div class="row q-col-gutter-xl">
             <!-- Brand Column -->
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-3">
               <div class="brand-logo-wrapper q-mb-md">
                 <img src="/logo.png" alt="Nurya Jewellery" class="brand-logo-footer" />
               </div>
               <p class="text-subtitle1 text-grey-7">
-                Crafting timeless elegance and bespoke beauty since 1995. Our commitment to quality and craftsmanship is unparalleled.
+                Crafting timeless elegance and bespoke beauty since 1995.
               </p>
               <div class="row q-gutter-sm q-mt-md">
                 <q-btn round flat icon="facebook" color="primary" type="a" href="https://www.facebook.com/share/1Aar2Vdiiv/" target="_blank" />
-                <!-- Replacing potentially missing icons with Material Design equivalents -->
-                <q-btn round flat icon="camera_alt" color="primary" type="a" href="https://www.instagram.com/nuryajewellery?igsh=MWd3MGk1OGM1b3A1dQ==" target="_blank">
+                <q-btn round flat icon="camera_alt" color="primary" type="a" href="https://www.instagram.com/nuryajewellery" target="_blank">
                   <q-tooltip>Instagram</q-tooltip>
                 </q-btn>
-                <q-btn round flat icon="music_note" color="primary" type="a" href="https://www.tiktok.com/@nuryajewellery?_r=1&_t=ZS-92q2p41As0w" target="_blank">
+                <q-btn round flat icon="music_note" color="primary" type="a" href="https://www.tiktok.com/@nuryajewellery" target="_blank">
                   <q-tooltip>TikTok</q-tooltip>
                 </q-btn>
                 <q-btn round flat icon="image" color="primary" type="a" href="#" target="_blank">
@@ -159,31 +335,55 @@
             <div class="col-6 col-md-2">
               <div class="text-h6 q-mb-lg text-gold">Shop</div>
               <q-list dense flat class="bg-transparent">
-                <q-item clickable v-ripple to="/"><q-item-section>All Collections</q-item-section></q-item>
-                <q-item clickable v-ripple><q-item-section>Rings</q-item-section></q-item>
-                <q-item clickable v-ripple><q-item-section>Necklaces</q-item-section></q-item>
-                <q-item clickable v-ripple><q-item-section>New Arrivals</q-item-section></q-item>
+                <q-item clickable v-ripple to="/products"><q-item-section>All Collections</q-item-section></q-item>
+                <q-item clickable v-ripple to="/products"><q-item-section>Rings</q-item-section></q-item>
+                <q-item clickable v-ripple to="/products"><q-item-section>Necklaces</q-item-section></q-item>
+                <q-item clickable v-ripple to="/products?sort=newest"><q-item-section>New Arrivals</q-item-section></q-item>
               </q-list>
             </div>
 
-            <!-- Links Column 2 -->
-            <div class="col-6 col-md-2">
-              <div class="text-h6 q-mb-lg text-gold">Support</div>
-              <q-list dense flat class="bg-transparent">
-                <q-item clickable v-ripple><q-item-section>Order Tracking</q-item-section></q-item>
-                <q-item clickable v-ripple><q-item-section>Privacy Policy</q-item-section></q-item>
-                <q-item clickable v-ripple><q-item-section>Terms of Service</q-item-section></q-item>
-                <q-item clickable v-ripple><q-item-section>FAQs</q-item-section></q-item>
-              </q-list>
+            <!-- Coupons Column -->
+            <div class="col-12 col-md-4">
+              <div class="text-h6 q-mb-lg text-gold">Exclusive Offers</div>
+              
+              <div v-if="voucherStore.loading" class="text-grey-7">Loading offers...</div>
+              
+              <div v-else-if="voucherStore.hasVouchers">
+                <q-list dense class="q-gutter-y-sm">
+                  <q-card 
+                    v-for="voucher in voucherStore.activeVouchers.slice(0, 2)" 
+                    :key="voucher.id" 
+                    class="bg-dark text-white border-gold-dashed"
+                    flat 
+                    bordered
+                  >
+                    <q-card-section class="q-pa-sm row items-center justify-between">
+                       <div>
+                         <div class="text-bold text-gold">{{ voucher.code }}</div>
+                         <div class="text-caption text-grey-4">{{ voucher.title }}</div>
+                         <div class="text-caption text-grey-5" v-if="voucher.discount_value">
+                            {{ voucher.discount_type === 'percentage' ? voucher.discount_value + '% OFF' : 'LKR ' + voucher.discount_value + ' OFF' }}
+                         </div>
+                       </div>
+                       <q-btn flat round icon="content_copy" size="xs" color="gold" @click="copyCode(voucher.code)" />
+                    </q-card-section>
+                  </q-card>
+                </q-list>
+              </div>
+
+              <div v-else class="text-grey-7 q-pa-sm border-gold-dashed rounded-borders text-center">
+                 <q-icon name="local_offer" size="sm" class="q-mb-xs" />
+                 <div class="text-caption">Stay tuned availability for<br>new exclusive offers!</div>
+              </div>
             </div>
 
             <!-- Contact Column -->
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-3">
               <div class="text-h6 q-mb-lg text-gold">Contact Us</div>
               <q-list dense flat class="bg-transparent">
                 <q-item>
                   <q-item-section avatar><q-icon name="place" color="primary" /></q-item-section>
-                  <q-item-section>123 Luxury Way, Colombo, Sri Lanka</q-item-section>
+                  <q-item-section>No 29, Godakalana, Loluwagoda</q-item-section>
                 </q-item>
                 <q-item clickable tag="a" href="tel:0776819034">
                   <q-item-section avatar><q-icon name="phone" color="primary" /></q-item-section>
@@ -192,6 +392,10 @@
                 <q-item clickable tag="a" href="mailto:Nuryajewellery@gmail.com">
                   <q-item-section avatar><q-icon name="email" color="primary" /></q-item-section>
                   <q-item-section>Nuryajewellery@gmail.com</q-item-section>
+                </q-item>
+                <q-item clickable v-ripple to="/faq">
+                  <q-item-section avatar><q-icon name="help" color="primary" /></q-item-section>
+                  <q-item-section>Frequently Asked Questions</q-item-section>
                 </q-item>
               </q-list>
             </div>
@@ -238,15 +442,30 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useCartStore } from 'stores/cart';
 import { useWishlistStore } from 'stores/wishlist';
+import { useFilterStore } from 'stores/filter';
+import { useVoucherStore } from 'stores/voucher';
 
 const $q = useQuasar();
 const cartStore = useCartStore();
 const wishlistStore = useWishlistStore();
+const filterStore = useFilterStore();
+const voucherStore = useVoucherStore();
 const leftDrawerOpen = ref(false);
+const route = useRoute();
+const router = useRouter();
+
+// ...
+
+// Fetch categories and vouchers
+onMounted(() => {
+  filterStore.fetchCategories();
+  voucherStore.fetchVouchers();
+});
 
 function toggleLeftDrawer() {
   leftDrawerOpen.value = !leftDrawerOpen.value;
@@ -256,13 +475,6 @@ function toggleDarkMode() {
   $q.dark.toggle();
 }
 
-function scrollTo(id) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth' });
-    leftDrawerOpen.value = false;
-  }
-}
 
 function openWhatsAppSupport() {
   const phone = '94776819034';
@@ -270,6 +482,45 @@ function openWhatsAppSupport() {
   const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
   window.open(url, '_blank');
 }
+
+const copyCode = (code) => {
+  navigator.clipboard.writeText(code);
+  $q.notify({
+    message: 'Code copied!',
+    color: 'gold',
+    textColor: 'black',
+    icon: 'check',
+    position: 'top',
+    timeout: 1000
+  });
+};
+
+const viewResults = () => {
+  // Close drawer
+  filterStore.toggleDrawer();
+  
+  // Navigate to products page with current filters as query params
+  router.push({
+    path: '/products',
+    query: {
+      category: filterStore.selectedCategory !== 'all' ? filterStore.selectedCategory : undefined,
+      min_price: filterStore.priceRange.min > 0 ? filterStore.priceRange.min : undefined,
+      max_price: filterStore.priceRange.max < 500000 ? filterStore.priceRange.max : undefined,
+      sort: filterStore.sortBy !== 'default' ? filterStore.sortBy : undefined
+    }
+  });
+};
+
+// Check if we are on a page that supports filtering
+const showFilterButton = computed(() => {
+  return ['/', '/products'].includes(route.path);
+});
+
+
+// Fetch categories for the drawer
+onMounted(() => {
+  filterStore.fetchCategories();
+});
 </script>
 
 <style lang="scss">
@@ -370,6 +621,10 @@ body.body--light .header-glass {
     transform: scale(1);
     box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
   }
+}
+
+.border-gold-dashed {
+  border: 1px dashed rgba(212, 175, 55, 0.5) !important;
 }
 </style>
 

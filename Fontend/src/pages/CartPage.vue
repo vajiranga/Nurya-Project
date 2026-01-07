@@ -96,7 +96,7 @@
               </div>
 
               <div class="row justify-between q-mb-sm text-green" v-if="discount > 0">
-                <span>Discount (10% OFF)</span>
+                <span>Discount</span>
                 <span>- LKR {{ formatPrice(discount) }}</span>
               </div>
 
@@ -377,6 +377,8 @@ const discount = ref(0);
 // Base shipping fee
 const baseShippingFee = 400;
 
+const isFreeShipping = ref(false);
+
 const showDetailsDialog = ref(false);
 const form = ref({
   fullName: '',
@@ -393,6 +395,7 @@ const form = ref({
 
 // Computed Shipping Fee
 const currentShippingFee = computed(() => {
+  if (isFreeShipping.value) return 0;
   return form.value.paymentMethod === 'pickup' ? 0 : baseShippingFee;
 });
 
@@ -412,22 +415,60 @@ const getImage = (images) => {
   return dummyImages[Math.floor(Math.random() * dummyImages.length)];
 };
 
-const applyCoupon = () => {
-  if (couponCode.value.trim().toUpperCase() === 'NURYA2026') {
-    discount.value = cartStore.totalAmount * 0.10;
-    $q.notify({
-      message: 'Coupon Applied Successfully! 10% Discount.',
-      color: 'positive',
-      icon: 'check_circle',
-      position: 'top'
+const applyCoupon = async () => {
+  if (!couponCode.value.trim()) return;
+  
+  $q.loading.show({ message: 'Verifying coupon...' });
+  
+  // Reset previous state
+  discount.value = 0;
+  isFreeShipping.value = false;
+  
+  try {
+    const res = await api.post('/vouchers/verify', {
+      code: couponCode.value,
+      total: cartStore.totalAmount
     });
-  } else {
+    
+    if (res.data.valid) {
+      const v = res.data.voucher;
+      let calculatedDiscount = 0;
+      
+      if (v.discount_type === 'percentage') {
+        calculatedDiscount = cartStore.totalAmount * (v.discount_value / 100);
+      } else if (v.discount_type === 'fixed') {
+        calculatedDiscount = Number(v.discount_value);
+      } else if (v.discount_type === 'free_shipping') {
+        isFreeShipping.value = true;
+      }
+      
+      // Ensure discount doesn't exceed total
+      if (calculatedDiscount > cartStore.totalAmount) {
+          calculatedDiscount = cartStore.totalAmount;
+      }
+      
+      discount.value = calculatedDiscount;
+      
+      $q.notify({
+        message: `Coupon Applied! ${v.title}`,
+        color: 'positive',
+        icon: 'check_circle',
+        position: 'top'
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    const msg = error.response?.data?.message || 'Invalid Coupon Code';
     $q.notify({
-      message: 'Invalid Coupon Code',
+      message: msg,
       color: 'negative',
       icon: 'error',
       position: 'top'
     });
+    discount.value = 0;
+    isFreeShipping.value = false;
+  } finally {
+    $q.loading.hide();
   }
 };
 
