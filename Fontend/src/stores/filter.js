@@ -6,7 +6,7 @@ export const useFilterStore = defineStore('filter', () => {
     const isDrawerOpen = ref(false);
     const categories = ref([]);
     const selectedCategory = ref('all');
-    const priceRange = ref({ min: 0, max: 500000 });
+    const priceRange = ref({ min: 0, max: 5000000 });
     const sortBy = ref('default');
 
     const sortOptions = [
@@ -35,7 +35,7 @@ export const useFilterStore = defineStore('filter', () => {
 
     const resetFilters = () => {
         selectedCategory.value = 'all';
-        priceRange.value = { min: 0, max: 500000 };
+        priceRange.value = { min: 0, max: 5000000 };
         sortBy.value = 'default';
     };
 

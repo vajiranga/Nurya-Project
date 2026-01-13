@@ -241,7 +241,7 @@
           <q-range
             v-model="filterStore.priceRange"
             :min="0"
-            :max="500000"
+            :max="5000000"
             :step="5000"
             label
             color="gold"
@@ -252,7 +252,7 @@
           />
           <div class="row justify-between text-caption text-grey-6 q-mt-sm">
              <span>LKR 0</span>
-             <span>LKR 500k+</span>
+             <span>LKR 5M+</span>
           </div>
         </div>
 
@@ -505,7 +505,7 @@ const viewResults = () => {
     query: {
       category: filterStore.selectedCategory !== 'all' ? filterStore.selectedCategory : undefined,
       min_price: filterStore.priceRange.min > 0 ? filterStore.priceRange.min : undefined,
-      max_price: filterStore.priceRange.max < 500000 ? filterStore.priceRange.max : undefined,
+      max_price: filterStore.priceRange.max < 5000000 ? filterStore.priceRange.max : undefined,
       sort: filterStore.sortBy !== 'default' ? filterStore.sortBy : undefined
     }
   });

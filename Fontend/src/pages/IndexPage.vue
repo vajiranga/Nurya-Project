@@ -36,7 +36,7 @@
       <div v-if="!loading" class="products-container">
         <div v-if="filteredProducts.length > 0" class="products-grid">
           <div 
-            v-for="(product, index) in filteredProducts.slice(0, 8)" 
+            v-for="(product, index) in filteredProducts.slice(0, 12)" 
             :key="product.id"
             class="product-card"
             @click="goToProduct(product.id)"
@@ -315,7 +315,7 @@ const viewAllProducts = () => {
     query: {
       category: filterStore.selectedCategory !== 'all' ? filterStore.selectedCategory : undefined,
       min_price: filterStore.priceRange.min > 0 ? filterStore.priceRange.min : undefined,
-      max_price: filterStore.priceRange.max < 500000 ? filterStore.priceRange.max : undefined,
+      max_price: filterStore.priceRange.max < 5000000 ? filterStore.priceRange.max : undefined,
       sort: filterStore.sortBy !== 'default' ? filterStore.sortBy : undefined
     }
   });

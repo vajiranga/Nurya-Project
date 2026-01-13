@@ -161,6 +161,9 @@ onMounted(async () => {
     categories.value = catRes.data;
     products.value = prodRes.data; // Store full list locally to filter against
 
+    // Reset filters first
+    filterStore.resetFilters();
+
     // Sync Query Params to Store if present (handling Deep Links / Refreshes)
     if (Object.keys(route.query).length > 0) {
         if (route.query.category) filterStore.selectedCategory = route.query.category.toString(); // Ensure string if ID
